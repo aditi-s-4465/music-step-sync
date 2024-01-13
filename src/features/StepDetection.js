@@ -1,23 +1,40 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
+import { Button, StyleSheet, Text, View } from "react-native";
 import { Pedometer } from "expo-sensors";
 
 export function Steps() {
   const [currentStepCount, setCurrentStepCount] = useState(0);
-  const subscribe = async () => {
-    return Pedometer.watchStepCount((result) => {
-      setCurrentStepCount(result.steps);
-    });
+  const [timer, setTimer] = useState(0);
+  const [started, setStarted] = useState(false);
+
+  const startTimer = async () => {
+    if (!started) {
+      setStarted(true);
+    } else {
+      setStarted(false);
+    }
   };
+
   useEffect(() => {
-    const subscription = subscribe();
+    const authorizePedometer = async () => {
+      const isAvailable = await Pedometer.isAvailableAsync();
+      if (isAvailable) {
+        await Pedometer.requestPermissionsAsync();
+        return Pedometer.watchStepCount((result) => {
+          setCurrentStepCount(result.steps);
+        });
+      }
+    };
+
+    const subscription = authorizePedometer();
     return () => subscription && subscription.remove();
   }, []);
+
   return (
     <View style={styles.container}>
-      <Text>Walk! And watch this go up: {currentStepCount}</Text>
-      <StatusBar style="auto" />
+      <Text>Step Count: {currentStepCount}</Text>
+      <Text>Seconds Past: {timer}</Text>
+      <Button title={started ? "end" : "start"} onPress={() => startTimer()} />
     </View>
   );
 }
