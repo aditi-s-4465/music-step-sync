@@ -2,7 +2,7 @@ import { Text, View, StyleSheet, Pressable } from "react-native";
 import { Colors } from "../styles";
 import { Link } from "expo-router";
 
-export default function Home() {
+export default function ChooseMusic() {
   return (
     <View style={styles.container}>
       <Link href="/workout" asChild>
