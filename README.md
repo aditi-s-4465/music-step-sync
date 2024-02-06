@@ -20,6 +20,7 @@ Tech Stack: React Native/Expo
 - Search `Expo Go` in your app store and download it
 - Start the development server with `npm start`
   - this will compile the react native app using [expo](https://docs.expo.dev/more/expo-cli/)
+- make sure you are in Expo Go mode, not development build (you can change this by pressing the `s` key in your terminal)
 - scan the QR code that comes up from the terminal and you should get a link that opens up in the Expo Go app
 - now you can make changes to your code and they should live update in the Expo Go app
 
