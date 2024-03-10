@@ -5,6 +5,7 @@ export const AppTheme = {
     background: "rgba(28, 43, 33, 1)",
     card: "rgba(6, 95, 70, 0.65)",
     text: "rgba(255, 255, 255, 1)",
+    subtext: "rgba(202, 202, 202, 1)",
     border: "rgba(6, 95, 70, 0.65)",
     notification: "rgba(6, 95, 70, 0.65)",
   },
