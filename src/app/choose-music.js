@@ -62,6 +62,7 @@ export default function ChooseMusic() {
     });
   };
 
+  // get all relevant audio features of selected songs
   const startWorkout = async () => {
     const token = await getCurrentToken();
     const allSongs = [];
@@ -74,12 +75,40 @@ export default function ChooseMusic() {
         console.log(err);
       }
     }
-    console.log(allSongs.length);
+
+    function splitArray(array, size) {
+      const result = [];
+      for (let i = 0; i < array.length; i += size) {
+        result.push(array.slice(i, i + size));
+      }
+      return result;
+    }
+
+    // get audio features of all songs and combine with other information
+    // split array so each array is at most 100
+    const splitSongs = splitArray(allSongs, 100);
+    const allData = [];
+    for (const chunk of splitSongs) {
+      const features = await getAudioFeatures(
+        token,
+        chunk.map((item) => item.track.id)
+      );
+      const updatedChunk = chunk.map((item, index) => ({
+        ...item,
+        ...features.audio_features[index],
+      }));
+      allData.push(...updatedChunk);
+    }
   };
 
+  // only gets 50 songs from the playlist for now
   const getTracksFromPlaylist = async (token, tracksUrl) => {
     const parsedUrl = tracksUrl.split(baseUrl + "/")[1];
     return await spotifyRequest(parsedUrl + "?limit=50", token, "GET");
+  };
+
+  const getAudioFeatures = async (token, ids) => {
+    return await spotifyRequest("audio-features?ids=" + ids, token, "GET");
   };
 
   const getCurrentToken = async () => {
