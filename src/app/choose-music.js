@@ -15,6 +15,7 @@ import { Buffer } from "buffer";
 import { spotifyConst } from "../const";
 import * as SecureStore from "expo-secure-store";
 
+const baseUrl = "https://api.spotify.com/v1";
 const discovery = {
   authorizationEndpoint: "https://accounts.spotify.com/authorize",
   tokenEndpoint: "https://accounts.spotify.com/api/token",
@@ -61,8 +62,45 @@ export default function ChooseMusic() {
     });
   };
 
+  const startWorkout = async () => {
+    const token = await getCurrentToken();
+    const allSongs = [];
+    for (const playlist of selectedPlaylists) {
+      const tracksUrl = playlist.tracks.href;
+      try {
+        const tracks = await getTracksFromPlaylist(token, tracksUrl);
+        allSongs.push(...tracks.items);
+      } catch (err) {
+        console.log(err);
+      }
+    }
+    console.log(allSongs.length);
+  };
+
+  const getTracksFromPlaylist = async (token, tracksUrl) => {
+    const parsedUrl = tracksUrl.split(baseUrl + "/")[1];
+    return await spotifyRequest(parsedUrl + "?limit=50", token, "GET");
+  };
+
+  const getCurrentToken = async () => {
+    const expirationTime = await SecureStore.getItemAsync("expirationTime");
+    if (expirationTime && new Date().getTime() > parseInt(expirationTime, 10)) {
+      // access token expired so you need to use the refresh token
+      // to get a new one
+      console.log("getting refresh token");
+      const refreshToken = await SecureStore.getItemAsync("refresh");
+      await getAccessToken(refreshToken, true);
+      setSignedIn(true);
+    } else {
+      // you either need to sign in or access token is still good
+      setSignedIn(true);
+    }
+    const accessToken = await SecureStore.getItemAsync("access");
+    return accessToken;
+  };
+
   const spotifyRequest = async (endpoint, token, method, body) => {
-    const res = await fetch(`https://api.spotify.com/v1/${endpoint}`, {
+    const res = await fetch(`${baseUrl}/${endpoint}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -129,24 +167,8 @@ export default function ChooseMusic() {
   };
 
   useEffect(() => {
-    const loadCredentials = async () => {
-      const expirationTime = await SecureStore.getItemAsync("expirationTime");
-      // need to use refresh token
-      if (
-        expirationTime &&
-        new Date().getTime() > parseInt(expirationTime, 10)
-      ) {
-        console.log("getting refresh token");
-        const refreshToken = await SecureStore.getItemAsync("refresh");
-        getAccessToken(refreshToken, true);
-        setSignedIn(true);
-      } else {
-        setSignedIn(true);
-      }
-    };
-
     const getFavoriteAlbumsPlaylists = async () => {
-      const token = await SecureStore.getItemAsync("access");
+      const token = await getCurrentToken();
       try {
         const res = await spotifyRequest("me/playlists?limit=50", token, "GET");
         setPlaylists(res.items);
@@ -155,7 +177,6 @@ export default function ChooseMusic() {
       }
     };
 
-    loadCredentials();
     getFavoriteAlbumsPlaylists();
   }, []);
 
@@ -189,7 +210,7 @@ export default function ChooseMusic() {
         </Pressable>
       )}
       <Link href="/workout" asChild>
-        <Pressable style={styles.startButton}>
+        <Pressable style={styles.startButton} onPress={() => startWorkout()}>
           <Text
             style={{
               fontSize: 20,
