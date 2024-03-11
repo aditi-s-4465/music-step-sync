@@ -1,4 +1,12 @@
-import { Text, View, StyleSheet, Pressable } from "react-native";
+/* eslint-disable react/prop-types */
+import {
+  Text,
+  View,
+  StyleSheet,
+  Pressable,
+  Image,
+  FlatList,
+} from "react-native";
 import { Colors } from "../styles";
 import { Link } from "expo-router";
 import { makeRedirectUri, useAuthRequest } from "expo-auth-session";
@@ -12,8 +20,23 @@ const discovery = {
   tokenEndpoint: "https://accounts.spotify.com/api/token",
 };
 
+const PlaylistCard = ({ item, isSelected, onPress }) => (
+  <Pressable
+    onPress={() => onPress(item)}
+    style={[styles.playlistCard, isSelected && styles.selectedCard]}
+  >
+    <Image src={item.images[0].url} style={styles.playlistImage} />
+    <Text numberOfLines={1} ellipsizeMode="tail" style={styles.playlistCaption}>
+      {item.name}
+    </Text>
+  </Pressable>
+);
+
 export default function ChooseMusic() {
   const [signedIn, setSignedIn] = useState(false);
+  const [userPlaylists, setPlaylists] = useState([]);
+  const [selectedPlaylists, setSelected] = useState([]);
+
   const [_, response, promptAsync] = useAuthRequest(
     {
       clientId: spotifyConst.clientId,
@@ -27,6 +50,16 @@ export default function ChooseMusic() {
     // eslint-disable-next-line prettier/prettier
     discovery
   );
+
+  const selectPlaylist = (obj) => {
+    setSelected((prevPlaylists) => {
+      if (prevPlaylists.some((item) => item.id === obj.id)) {
+        return prevPlaylists.filter((item) => item.id !== obj.id);
+      } else {
+        return [...prevPlaylists, obj];
+      }
+    });
+  };
 
   const spotifyRequest = async (endpoint, token, method, body) => {
     const res = await fetch(`https://api.spotify.com/v1/${endpoint}`, {
@@ -103,6 +136,7 @@ export default function ChooseMusic() {
         expirationTime &&
         new Date().getTime() > parseInt(expirationTime, 10)
       ) {
+        console.log("getting refresh token");
         const refreshToken = await SecureStore.getItemAsync("refresh");
         getAccessToken(refreshToken, true);
         setSignedIn(true);
@@ -111,18 +145,18 @@ export default function ChooseMusic() {
       }
     };
 
-    const tryPlay = async () => {
+    const getFavoriteAlbumsPlaylists = async () => {
       const token = await SecureStore.getItemAsync("access");
       try {
-        const res = await spotifyRequest("me/player/next", token, "POST");
-        console.log(res);
+        const res = await spotifyRequest("me/playlists?limit=50", token, "GET");
+        setPlaylists(res.items);
       } catch (err) {
         console.log(err);
       }
     };
 
     loadCredentials();
-    tryPlay();
+    getFavoriteAlbumsPlaylists();
   }, []);
 
   useEffect(() => {
@@ -166,6 +200,22 @@ export default function ChooseMusic() {
           </Text>
         </Pressable>
       </Link>
+      <View style={styles.playlistContainer}>
+        <FlatList
+          style={styles.playlistContainer}
+          data={userPlaylists}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <PlaylistCard
+              item={item}
+              onPress={selectPlaylist}
+              isSelected={selectedPlaylists.some((e) => e.id === item.id)}
+            ></PlaylistCard>
+          )}
+          horizontal={false}
+          numColumns={2}
+        />
+      </View>
     </View>
   );
 }
@@ -184,5 +234,26 @@ const styles = StyleSheet.create({
     height: 50,
     alignItems: "center",
     justifyContent: "center",
+  },
+  playlistCard: {
+    borderWidth: 5,
+    width: 150,
+    height: 150,
+    margin: 20,
+  },
+  selectedCard: { borderColor: "lightblue" },
+
+  playlistImage: {
+    width: "100%",
+    height: "100%",
+  },
+  playlistCaption: {
+    color: Colors.AppTheme.colors.text,
+    marginTop: 5,
+  },
+
+  playlistContainer: {
+    marginBottom: 70,
+    marginTop: 20,
   },
 });
