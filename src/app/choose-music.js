@@ -28,6 +28,17 @@ export default function ChooseMusic() {
     discovery
   );
 
+  const spotifyRequest = async (endpoint, token, method, body) => {
+    const res = await fetch(`https://api.spotify.com/v1/${endpoint}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      method,
+      body: JSON.stringify(body),
+    });
+    return await res.json();
+  };
+
   const getAccessToken = async (code, refresh = false) => {
     let body;
     if (refresh) {
@@ -100,7 +111,18 @@ export default function ChooseMusic() {
       }
     };
 
+    const tryPlay = async () => {
+      const token = await SecureStore.getItemAsync("access");
+      try {
+        const res = await spotifyRequest("me/player/next", token, "POST");
+        console.log(res);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
     loadCredentials();
+    tryPlay();
   }, []);
 
   useEffect(() => {
