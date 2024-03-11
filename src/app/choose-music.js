@@ -2,9 +2,10 @@ import { Text, View, StyleSheet, Pressable } from "react-native";
 import { Colors } from "../styles";
 import { Link } from "expo-router";
 import { makeRedirectUri, useAuthRequest } from "expo-auth-session";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Buffer } from "buffer";
 import { spotifyConst } from "../const";
+import * as SecureStore from "expo-secure-store";
 
 const discovery = {
   authorizationEndpoint: "https://accounts.spotify.com/authorize",
@@ -12,6 +13,7 @@ const discovery = {
 };
 
 export default function ChooseMusic() {
+  const [signedIn, setSignedIn] = useState(false);
   const [_, response, promptAsync] = useAuthRequest(
     {
       clientId: spotifyConst.clientId,
@@ -55,11 +57,51 @@ export default function ChooseMusic() {
       });
 
       const responseJson = await res.json();
-      console.log(responseJson);
+      const {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expires_in: expiresIn,
+      } = responseJson;
+
+      // store spotify tokens securely
+      if (accessToken) {
+        await SecureStore.setItemAsync("access", accessToken);
+      }
+
+      if (refreshToken) {
+        await SecureStore.setItemAsync("refresh", refreshToken);
+      }
+
+      if (expiresIn) {
+        const expirationTime = new Date().getTime() + expiresIn * 1000;
+        await SecureStore.setItemAsync(
+          "expirationTime",
+          String(expirationTime)
+        );
+      }
     } catch (err) {
       console.log(err);
     }
   };
+
+  useEffect(() => {
+    const loadCredentials = async () => {
+      const expirationTime = await SecureStore.getItemAsync("expirationTime");
+      // need to use refresh token
+      if (
+        expirationTime &&
+        new Date().getTime() > parseInt(expirationTime, 10)
+      ) {
+        const refreshToken = await SecureStore.getItemAsync("refresh");
+        getAccessToken(refreshToken, true);
+        setSignedIn(true);
+      } else {
+        setSignedIn(true);
+      }
+    };
+
+    loadCredentials();
+  }, []);
 
   useEffect(() => {
     if (response?.type === "success") {
@@ -70,24 +112,26 @@ export default function ChooseMusic() {
 
   return (
     <View style={styles.container}>
-      <Pressable
-        onPress={() => promptAsync()}
-        style={{
-          marginTop: 50,
-          height: 60,
-          justifyContent: "center",
-          backgroundColor: Colors.AppTheme.colors.primary,
-        }}
-      >
-        <Text
+      {!signedIn && (
+        <Pressable
+          onPress={() => promptAsync()}
           style={{
-            fontSize: 10,
-            color: Colors.AppTheme.colors.text,
+            marginTop: 50,
+            height: 60,
+            justifyContent: "center",
+            backgroundColor: Colors.AppTheme.colors.primary,
           }}
         >
-          Connect to Spotify
-        </Text>
-      </Pressable>
+          <Text
+            style={{
+              fontSize: 10,
+              color: Colors.AppTheme.colors.text,
+            }}
+          >
+            Connect to Spotify
+          </Text>
+        </Pressable>
+      )}
       <Link href="/workout" asChild>
         <Pressable style={styles.startButton}>
           <Text
