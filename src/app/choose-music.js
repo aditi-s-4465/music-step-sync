@@ -6,9 +6,11 @@ import {
   Pressable,
   Image,
   FlatList,
+  ActivityIndicator,
+  Modal,
 } from "react-native";
 import { Colors } from "../styles";
-import { Link } from "expo-router";
+import { router, Link } from "expo-router";
 import { makeRedirectUri, useAuthRequest } from "expo-auth-session";
 import { useEffect, useState } from "react";
 import { Buffer } from "buffer";
@@ -37,6 +39,8 @@ export default function ChooseMusic() {
   const [signedIn, setSignedIn] = useState(false);
   const [userPlaylists, setPlaylists] = useState([]);
   const [selectedPlaylists, setSelected] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errMsg, setErrMsg] = useState(null);
 
   const [_, response, promptAsync] = useAuthRequest(
     {
@@ -64,6 +68,13 @@ export default function ChooseMusic() {
 
   // get all relevant audio features of selected songs
   const startWorkout = async () => {
+    if (selectedPlaylists.length === 0) {
+      setErrMsg("You need to select at least one playlist");
+      return;
+    }
+
+    setIsLoading(true);
+
     const token = await getCurrentToken();
     const allSongs = [];
     for (const playlist of selectedPlaylists) {
@@ -73,9 +84,13 @@ export default function ChooseMusic() {
         allSongs.push(...tracks.items);
       } catch (err) {
         console.log(err);
+        setErrMsg("Failed to connect to spotify");
+        return;
       }
     }
 
+    // get audio features of all songs and combine with other information
+    // split array so each array is at most 100
     function splitArray(array, size) {
       const result = [];
       for (let i = 0; i < array.length; i += size) {
@@ -84,21 +99,28 @@ export default function ChooseMusic() {
       return result;
     }
 
-    // get audio features of all songs and combine with other information
-    // split array so each array is at most 100
     const splitSongs = splitArray(allSongs, 100);
     const allData = [];
     for (const chunk of splitSongs) {
-      const features = await getAudioFeatures(
-        token,
-        chunk.map((item) => item.track.id)
-      );
-      const updatedChunk = chunk.map((item, index) => ({
-        ...item,
-        ...features.audio_features[index],
-      }));
-      allData.push(...updatedChunk);
+      try {
+        const features = await getAudioFeatures(
+          token,
+          chunk.map((item) => item.track.id)
+        );
+        const updatedChunk = chunk.map((item, index) => ({
+          ...item,
+          ...features.audio_features[index],
+        }));
+        allData.push(...updatedChunk);
+      } catch (err) {
+        console.log(err);
+        setErrMsg("Failed to connect to Spotify");
+        return;
+      }
     }
+
+    // go to workout page after done loading data from api
+    router.push("/workout");
   };
 
   // only gets 50 songs from the playlist for now
@@ -192,17 +214,21 @@ export default function ChooseMusic() {
       }
     } catch (err) {
       console.log(err);
+      setErrMsg("Failed to connect to Spotify");
     }
   };
 
+  // load playlists on component load
   useEffect(() => {
     const getFavoriteAlbumsPlaylists = async () => {
       const token = await getCurrentToken();
       try {
         const res = await spotifyRequest("me/playlists?limit=50", token, "GET");
         setPlaylists(res.items);
+        setIsLoading(false);
       } catch (err) {
         console.log(err);
+        setErrMsg("Failed to connect to Spotify");
       }
     };
 
@@ -238,18 +264,16 @@ export default function ChooseMusic() {
           </Text>
         </Pressable>
       )}
-      <Link href="/workout" asChild>
-        <Pressable style={styles.startButton} onPress={() => startWorkout()}>
-          <Text
-            style={{
-              fontSize: 20,
-              color: Colors.AppTheme.colors.text,
-            }}
-          >
-            Start Workout
-          </Text>
-        </Pressable>
-      </Link>
+      <Pressable style={styles.startButton} onPress={() => startWorkout()}>
+        <Text
+          style={{
+            fontSize: 20,
+            color: Colors.AppTheme.colors.text,
+          }}
+        >
+          Start Workout
+        </Text>
+      </Pressable>
       <View style={styles.playlistContainer}>
         <FlatList
           style={styles.playlistContainer}
@@ -266,6 +290,28 @@ export default function ChooseMusic() {
           numColumns={2}
         />
       </View>
+      {(isLoading || errMsg) && (
+        <View style={styles.loading}>
+          {errMsg ? (
+            <View style={styles.errMsgContainer}>
+              <Text style={{ fontSize: 15, textAlign: "center" }}>
+                {errMsg}
+              </Text>
+              <Link asChild href="/">
+                <Pressable style={styles.errBtn}>
+                  <Text style={{ color: "white", fontSize: 15 }}>Retry</Text>
+                </Pressable>
+              </Link>
+            </View>
+          ) : (
+            <ActivityIndicator
+              animating={isLoading}
+              size="large"
+              color="green"
+            />
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -305,5 +351,35 @@ const styles = StyleSheet.create({
   playlistContainer: {
     marginBottom: 70,
     marginTop: 20,
+  },
+
+  loading: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(52, 52, 52, 0.6)",
+  },
+
+  errMsgContainer: {
+    backgroundColor: "white",
+    width: 200,
+    height: 200,
+    borderRadius: 5,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  errBtn: {
+    width: "50%",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 50,
+    backgroundColor: Colors.AppTheme.colors.primary,
+    borderRadius: 5,
+    height: "30%",
   },
 });
