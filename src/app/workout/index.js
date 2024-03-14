@@ -4,6 +4,7 @@ import { Colors } from "../../styles";
 import { Link } from "expo-router";
 import { Pedometer } from "expo-sensors";
 import { spmUpdateInterval } from "../../const";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Workout() {
   const [workoutState, setWorkoutState] = useState({
@@ -11,6 +12,8 @@ export default function Workout() {
     stepCount: 0,
     secondsElapsed: 0,
   });
+
+  const [songs, setSongs] = useState([]);
 
   useEffect(() => {
     const authorizePedometer = async () => {
@@ -30,8 +33,21 @@ export default function Workout() {
       }
     };
 
+    const getSelectedSongs = async () => {
+      try {
+        const songs = await AsyncStorage.getItem("songs");
+        const parsedSongs = JSON.parse(songs);
+        setSongs(parsedSongs);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
     // check if device has motion tracking enabled
     authorizePedometer();
+
+    // load selected songs from storage
+    getSelectedSongs();
 
     // update seconds elapsed every second
     const timer = setInterval(() => {
