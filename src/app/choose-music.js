@@ -7,7 +7,6 @@ import {
   Image,
   FlatList,
   ActivityIndicator,
-  Modal,
 } from "react-native";
 import { Colors } from "../styles";
 import { router, Link } from "expo-router";
@@ -16,6 +15,7 @@ import { useEffect, useState } from "react";
 import { Buffer } from "buffer";
 import { spotifyConst } from "../const";
 import * as SecureStore from "expo-secure-store";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const baseUrl = "https://api.spotify.com/v1";
 const discovery = {
@@ -107,6 +107,7 @@ export default function ChooseMusic() {
           token,
           chunk.map((item) => item.track.id)
         );
+        // combine audio features with basic song features
         const updatedChunk = chunk.map((item, index) => ({
           ...item,
           ...features.audio_features[index],
@@ -117,6 +118,26 @@ export default function ChooseMusic() {
         setErrMsg("Failed to connect to Spotify");
         return;
       }
+    }
+    // only get relevant features to reduce data size in storage
+    const reducedData = allData.map((item) => ({
+      id: item.id,
+      tempo: item.tempo,
+      duration: item.duration_ms,
+      uri: item.uri,
+      name: item.track.name,
+      image: item.track.album.images[0],
+      artists: item.track.artists.map((artist) => artist.name),
+    }));
+
+    // save songs to storage to use in workout
+    try {
+      const jsonData = JSON.stringify(reducedData);
+      await AsyncStorage.setItem("songs", jsonData);
+    } catch (err) {
+      console.log(err);
+      setErrMsg("Failed to connect to Spotify");
+      return;
     }
 
     // go to workout page after done loading data from api
@@ -129,6 +150,7 @@ export default function ChooseMusic() {
     return await spotifyRequest(parsedUrl + "?limit=50", token, "GET");
   };
 
+  // gets at most 100 song's audio features at once
   const getAudioFeatures = async (token, ids) => {
     return await spotifyRequest("audio-features?ids=" + ids, token, "GET");
   };
