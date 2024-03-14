@@ -12,16 +12,8 @@ import { Colors } from "../styles";
 import { router, Link } from "expo-router";
 import { makeRedirectUri, useAuthRequest } from "expo-auth-session";
 import { useEffect, useState } from "react";
-import { Buffer } from "buffer";
-import { spotifyConst } from "../const";
-import * as SecureStore from "expo-secure-store";
+import * as SpotifyHelper from "../api/spotifyHelper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const baseUrl = "https://api.spotify.com/v1";
-const discovery = {
-  authorizationEndpoint: "https://accounts.spotify.com/authorize",
-  tokenEndpoint: "https://accounts.spotify.com/api/token",
-};
 
 const PlaylistCard = ({ item, isSelected, onPress }) => (
   <Pressable
@@ -39,13 +31,13 @@ export default function ChooseMusic() {
   const [signedIn, setSignedIn] = useState(false);
   const [userPlaylists, setPlaylists] = useState([]);
   const [selectedPlaylists, setSelected] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [errMsg, setErrMsg] = useState(null);
 
   const [_, response, promptAsync] = useAuthRequest(
     {
-      clientId: spotifyConst.clientId,
-      scopes: spotifyConst.scopes,
+      clientId: SpotifyHelper.spotifyConst.clientId,
+      scopes: SpotifyHelper.spotifyConst.scopes,
       // To follow the "Authorization Code Flow" to fetch token after
       // authorizationEndpoint
       // this must be set to false
@@ -53,7 +45,7 @@ export default function ChooseMusic() {
       redirectUri: makeRedirectUri({ path: "choose-music" }),
     },
     // eslint-disable-next-line prettier/prettier
-    discovery
+    SpotifyHelper.spotifyConst.discovery
   );
 
   const selectPlaylist = (obj) => {
@@ -75,12 +67,15 @@ export default function ChooseMusic() {
 
     setIsLoading(true);
 
-    const token = await getCurrentToken();
+    const token = await SpotifyHelper.getCurrentToken();
     const allSongs = [];
     for (const playlist of selectedPlaylists) {
       const tracksUrl = playlist.tracks.href;
       try {
-        const tracks = await getTracksFromPlaylist(token, tracksUrl);
+        const tracks = await SpotifyHelper.getTracksFromPlaylist(
+          token,
+          tracksUrl
+        );
         allSongs.push(...tracks.items);
       } catch (err) {
         console.log(err);
@@ -103,7 +98,7 @@ export default function ChooseMusic() {
     const allData = [];
     for (const chunk of splitSongs) {
       try {
-        const features = await getAudioFeatures(
+        const features = await SpotifyHelper.getAudioFeatures(
           token,
           chunk.map((item) => item.track.id)
         );
@@ -144,124 +139,54 @@ export default function ChooseMusic() {
     router.push("/workout");
   };
 
-  // only gets 50 songs from the playlist for now
-  const getTracksFromPlaylist = async (token, tracksUrl) => {
-    const parsedUrl = tracksUrl.split(baseUrl + "/")[1];
-    return await spotifyRequest(parsedUrl + "?limit=50", token, "GET");
-  };
-
-  // gets at most 100 song's audio features at once
-  const getAudioFeatures = async (token, ids) => {
-    return await spotifyRequest("audio-features?ids=" + ids, token, "GET");
-  };
-
-  const getCurrentToken = async () => {
-    const expirationTime = await SecureStore.getItemAsync("expirationTime");
-    if (expirationTime && new Date().getTime() > parseInt(expirationTime, 10)) {
-      // access token expired so you need to use the refresh token
-      // to get a new one
-      console.log("getting refresh token");
-      const refreshToken = await SecureStore.getItemAsync("refresh");
-      await getAccessToken(refreshToken, true);
-      setSignedIn(true);
-    } else {
-      // you either need to sign in or access token is still good
-      setSignedIn(true);
-    }
-    const accessToken = await SecureStore.getItemAsync("access");
-    return accessToken;
-  };
-
-  const spotifyRequest = async (endpoint, token, method, body) => {
-    const res = await fetch(`${baseUrl}/${endpoint}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      method,
-      body: JSON.stringify(body),
-    });
-    return await res.json();
-  };
-
-  const getAccessToken = async (code, refresh = false) => {
-    let body;
-    if (refresh) {
-      body = new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: code,
-      });
-    } else {
-      body = new URLSearchParams({
-        grant_type: "authorization_code",
-        code: code,
-        redirect_uri: makeRedirectUri({ path: "choose-music" }),
-      });
-    }
-    try {
-      const res = await fetch(discovery.tokenEndpoint, {
-        method: "POST",
-        headers: {
-          Authorization:
-            "Basic " +
-            Buffer.from(
-              spotifyConst.clientId + ":" + spotifyConst.clientSecret
-            ).toString("base64"),
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: body.toString(),
-      });
-
-      const responseJson = await res.json();
-      const {
-        access_token: accessToken,
-        refresh_token: refreshToken,
-        expires_in: expiresIn,
-      } = responseJson;
-
-      // store spotify tokens securely
-      if (accessToken) {
-        await SecureStore.setItemAsync("access", accessToken);
-      }
-
-      if (refreshToken) {
-        await SecureStore.setItemAsync("refresh", refreshToken);
-      }
-
-      if (expiresIn) {
-        const expirationTime = new Date().getTime() + expiresIn * 1000;
-        await SecureStore.setItemAsync(
-          "expirationTime",
-          String(expirationTime)
-        );
-      }
-    } catch (err) {
-      console.log(err);
-      setErrMsg("Failed to connect to Spotify");
-    }
-  };
-
-  // load playlists on component load
+  // load playlists on component load if you've already signed in
   useEffect(() => {
     const getFavoriteAlbumsPlaylists = async () => {
-      const token = await getCurrentToken();
-      try {
-        const res = await spotifyRequest("me/playlists?limit=50", token, "GET");
-        setPlaylists(res.items);
-        setIsLoading(false);
-      } catch (err) {
-        console.log(err);
-        setErrMsg("Failed to connect to Spotify");
+      const token = await SpotifyHelper.getCurrentToken();
+      // if no token then you still need to sign in
+      if (token) {
+        setIsLoading(true);
+        setSignedIn(true);
+        try {
+          const res = await SpotifyHelper.getFavoritePlaylists(token);
+          setPlaylists(res);
+          setIsLoading(false);
+        } catch (err) {
+          console.log(err);
+          setErrMsg("Failed to connect to Spotify");
+        }
       }
     };
 
     getFavoriteAlbumsPlaylists();
   }, []);
 
+  // if you haven't signed into spotify on this device before
   useEffect(() => {
-    if (response?.type === "success") {
-      const { code } = response.params;
-      getAccessToken(code);
-    }
+    const getFirstToken = async () => {
+      if (response?.type === "success") {
+        const { code } = response.params;
+
+        const success = await SpotifyHelper.getAccessToken(code);
+        if (!success) {
+          setErrMsg("Failed to connect to Spotify");
+        } else {
+          setIsLoading(true);
+          setSignedIn(true);
+          const token = await SpotifyHelper.getCurrentToken();
+          try {
+            const items = await SpotifyHelper.getFavoritePlaylists(token);
+            setPlaylists(items);
+          } catch (err) {
+            console.log(err);
+            setErrMsg("Failed to connect to Spotify");
+          }
+          setIsLoading(false);
+        }
+      }
+    };
+
+    getFirstToken();
   }, [response]);
 
   return (
@@ -272,6 +197,7 @@ export default function ChooseMusic() {
           style={{
             marginTop: 50,
             height: 60,
+            borderRadius: 5,
             justifyContent: "center",
             backgroundColor: Colors.AppTheme.colors.primary,
           }}
