@@ -7,6 +7,7 @@ import {
   spmUpdateInterval,
   numCalibrationIntervals,
   tempoAdjustmentTolerance,
+  minDataPoints,
 } from "../../const";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SpotifyHelper from "../../api/spotifyHelper";
@@ -18,6 +19,7 @@ export default function Workout() {
     spm: 0,
     stepCount: 0,
     secondsElapsed: 0,
+    stepData: [],
   });
 
   const [songs, setSongs] = useState([]);
@@ -151,7 +153,17 @@ export default function Workout() {
     // update steps per minute every 5 seconds
     const spmCalculator = setInterval(() => {
       setWorkoutState((prevState) => {
-        const newSpm = (prevState.stepCount / prevState.secondsElapsed) * 60;
+        // not enough data to calculate spm
+        if (prevState.stepData.length < minDataPoints) {
+          return { ...prevState, spm: 0 };
+        }
+        const totalTime =
+          (prevState.secondsElapsed - prevState.stepData[0].secondsElapsed) /
+          60;
+        const stepChange =
+          prevState.stepCount - prevState.stepData[0].stepCount;
+
+        const newSpm = stepChange / totalTime;
         const roundedSpm = parseFloat(newSpm.toFixed(1));
         return { ...prevState, spm: roundedSpm };
       });
@@ -160,7 +172,20 @@ export default function Workout() {
     // watch for step count changes
     const subscription = Pedometer.watchStepCount((result) => {
       setWorkoutState((prevState) => {
-        return { ...prevState, stepCount: result.steps };
+        // keep last n data points
+        let currArr = prevState.stepData;
+        currArr.push({
+          stepCount: result.steps,
+          secondsElapsed: prevState.secondsElapsed,
+        });
+        if (currArr.length > numCalibrationIntervals) {
+          currArr.shift();
+        }
+        return {
+          ...prevState,
+          stepCount: result.steps,
+          stepData: currArr,
+        };
       });
     });
 
