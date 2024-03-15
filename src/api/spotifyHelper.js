@@ -30,7 +30,8 @@ export const spotifyRequest = async (endpoint, token, method, body) => {
     method,
     body: JSON.stringify(body),
   });
-  return await res.json();
+  const s = await res.text();
+  return s === "" ? {} : JSON.parse(s);
 };
 
 // only gets 50 songs from the playlist for now

@@ -145,7 +145,9 @@ export default function ChooseMusic() {
         {
           text: "OK",
           onPress: () => {
-            Linking.openURL(reducedData[0].uri);
+            Linking.openURL(
+              reducedData[Math.floor(Math.random() * reducedData.length)].uri
+            );
             router.push("/workout");
           },
         },
