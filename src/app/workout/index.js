@@ -36,7 +36,10 @@ export default function Workout() {
         setIsPaceSet(!paceIsSet);
       }
     } else {
-      // reset pace
+      // reset pace by clearing step data
+      setWorkoutState((prevState) => {
+        return { ...prevState, stepData: [] };
+      });
       setIsPaceSet(!paceIsSet);
     }
   };
