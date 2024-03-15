@@ -6,7 +6,6 @@ import { Pedometer } from "expo-sensors";
 import { spmUpdateInterval } from "../../const";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SpotifyHelper from "../../api/spotifyHelper";
-import * as Linking from "expo-linking";
 
 export default function Workout() {
   const [workoutState, setWorkoutState] = useState({
@@ -16,6 +15,7 @@ export default function Workout() {
   });
 
   const [songs, setSongs] = useState([]);
+  const [currDeviceId, setCurrDevice] = useState("");
 
   useEffect(() => {
     const authorizePedometer = async () => {
@@ -41,10 +41,25 @@ export default function Workout() {
         const parsedSongs = JSON.parse(songs);
         setSongs(parsedSongs);
 
-        // play random initial song
-        Linking.openURL(
-          parsedSongs[Math.floor(Math.random() * parsedSongs.length)].uri
+        // get current device id of smartphone
+        const token = await SpotifyHelper.getCurrentToken();
+        const devices = await SpotifyHelper.spotifyRequest(
+          "me/player/devices",
+          token,
+          "GET"
         );
+        const currDevice = devices.devices.filter(
+          (item) => item.type === "Smartphone"
+        )[0];
+
+        if (!currDevice) {
+          Alert.alert(
+            "Spotify Not Open",
+            "Make sure to open Spotify on this device"
+          );
+        } else {
+          setCurrDevice(currDevice);
+        }
       } catch (err) {
         console.log(err);
       }

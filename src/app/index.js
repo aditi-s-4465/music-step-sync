@@ -1,6 +1,8 @@
-import { Text, View, StyleSheet, Pressable } from "react-native";
+import { Text, View, StyleSheet, Pressable, Alert } from "react-native";
 import { Colors } from "../styles";
-import { Link } from "expo-router";
+import * as Linking from "expo-linking";
+import { router } from "expo-router";
+
 // import { GluestackUIProvider, Text, Button } from "@gluestack-ui/themed"
 // import { config } from "@gluestack-ui/config"
 
@@ -70,19 +72,34 @@ export default function Home() {
           </View>
         </View>
       </View>
-      <Link href="/choose-music" asChild>
-        <Pressable style={styles.Start_button}>
-          <Text
-            style={{
-              fontSize: 25,
-              color: Colors.AppTheme.colors.text,
-              fontWeight: "bold",
-            }}
-          >
-            Start
-          </Text>
-        </Pressable>
-      </Link>
+      <Pressable
+        style={styles.Start_button}
+        onPress={() =>
+          Alert.alert(
+            "Opening Spotify",
+            "Make sure to return to this app after Spotify is open",
+            [
+              {
+                text: "OK",
+                onPress: () => {
+                  Linking.openURL("https://open.spotify.com/");
+                  router.push("/choose-music");
+                },
+              },
+            ]
+          )
+        }
+      >
+        <Text
+          style={{
+            fontSize: 25,
+            color: Colors.AppTheme.colors.text,
+            fontWeight: "bold",
+          }}
+        >
+          Start
+        </Text>
+      </Pressable>
     </View>
   );
 }
