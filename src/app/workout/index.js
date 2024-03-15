@@ -3,9 +3,15 @@ import { useState, useEffect } from "react";
 import { Colors } from "../../styles";
 import { Link } from "expo-router";
 import { Pedometer } from "expo-sensors";
-import { spmUpdateInterval } from "../../const";
+import {
+  spmUpdateInterval,
+  numCalibrationIntervals,
+  tempoAdjustmentTolerance,
+} from "../../const";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SpotifyHelper from "../../api/spotifyHelper";
+import { Feather } from "@expo/vector-icons";
+import { EvilIcons } from "@expo/vector-icons";
 
 export default function Workout() {
   const [workoutState, setWorkoutState] = useState({
@@ -15,7 +21,89 @@ export default function Workout() {
   });
 
   const [songs, setSongs] = useState([]);
-  const [currDeviceId, setCurrDevice] = useState("");
+  // const [currDeviceId, setCurrDevice] = useState("");
+  const [paceIsSet, setIsPaceSet] = useState(false);
+  const [tempoRange, setTempoRange] = useState({});
+
+  const paceChange = async () => {
+    if (!paceIsSet) {
+      // pick song from current pace
+      const song = getSongfromSPM(workoutState.spm);
+      const playing = await playSong(song);
+      if (playing) {
+        setIsPaceSet(!paceIsSet);
+      }
+    } else {
+      // reset pace
+      setIsPaceSet(!paceIsSet);
+    }
+  };
+
+  // gets percent difference between bpm and spm
+  // const getTempoAdjustment = (bpm, spm) => {
+  //   return Math.abs(spm / bpm - 1);
+  // };
+
+  //algorithm to get closes bpm song from spm
+  const getSongfromSPM = (spm) => {
+    console.log(tempoRange);
+    const closest = songs.reduce((prev, curr) =>
+      Math.abs(curr.tempo - spm) < Math.abs(prev.tempo - spm) ? curr : prev
+    );
+    return closest;
+  };
+
+  // returns true if successfully started playing
+  const playSong = async (songObj) => {
+    try {
+      const token = await SpotifyHelper.getCurrentToken();
+      const res = await SpotifyHelper.spotifyRequest(
+        "me/player/play",
+        token,
+        "PUT",
+        {
+          uris: [songObj.uri],
+        }
+      );
+      if (res.error) {
+        Alert.alert(
+          "Spotify Not Open",
+          "Make sure Spotify is open and playing a song"
+        );
+        return false;
+      }
+    } catch (err) {
+      console.log(err);
+      return false;
+    }
+    return true;
+  };
+
+  // const getDevice = async () => {
+  //   try {
+  //     const token = await SpotifyHelper.getCurrentToken();
+  //     const devices = await SpotifyHelper.spotifyRequest(
+  //       "me/player/devices",
+  //       token,
+  //       "GET"
+  //     );
+  //     const currDevice = devices.devices.filter(
+  //       (item) => item.type === "Smartphone"
+  //     )[0];
+  //     console.log(currDevice);
+
+  //     if (!currDevice || !currDevice.is_active) {
+  //       Alert.alert(
+  //         "Spotify Not Open",
+  //         "Make sure Spotify is open and playing a song to start"
+  //       );
+  //     } else {
+  //       setCurrDevice(currDevice.id);
+  //     }
+  //   } catch (err) {
+  //     console.log(err);
+  //   }
+  // };
 
   useEffect(() => {
     const authorizePedometer = async () => {
@@ -39,27 +127,9 @@ export default function Workout() {
       try {
         const songs = await AsyncStorage.getItem("songs");
         const parsedSongs = JSON.parse(songs);
+        const tempos = parsedSongs.map((item) => item.tempo);
         setSongs(parsedSongs);
-
-        // get current device id of smartphone
-        const token = await SpotifyHelper.getCurrentToken();
-        const devices = await SpotifyHelper.spotifyRequest(
-          "me/player/devices",
-          token,
-          "GET"
-        );
-        const currDevice = devices.devices.filter(
-          (item) => item.type === "Smartphone"
-        )[0];
-
-        if (!currDevice) {
-          Alert.alert(
-            "Spotify Not Open",
-            "Make sure to open Spotify on this device"
-          );
-        } else {
-          setCurrDevice(currDevice);
-        }
+        setTempoRange({ min: Math.min(...tempos), max: Math.max(...tempos) });
       } catch (err) {
         console.log(err);
       }
@@ -114,6 +184,19 @@ export default function Workout() {
         </Text>
         <Text style={{ color: Colors.AppTheme.colors.text }}>Steps/Min</Text>
       </View>
+      <View style={styles.paceBtnContainer}>
+        <Pressable onPress={() => paceChange()}>
+          {paceIsSet ? (
+            <EvilIcons name="undo" size={80} color="green" />
+          ) : (
+            <Feather name="target" size={80} color="green" />
+          )}
+        </Pressable>
+        <Text style={{ color: "white", fontSize: 20 }}>
+          {paceIsSet ? "Reset Pace" : "Set Pace"}
+        </Text>
+      </View>
+
       <View style={styles.metricsContainer}>
         <Text style={styles.metricsText}>Distance:</Text>
         <Text style={styles.metricsText}>{workoutState.stepCount} Steps</Text>
@@ -121,7 +204,6 @@ export default function Workout() {
       <View style={styles.metricsContainer}>
         <Text style={styles.metricsText}>Duration:</Text>
         <Text style={styles.metricsText}>
-          {" "}
           {workoutState.secondsElapsed} Seconds
         </Text>
       </View>
@@ -176,5 +258,11 @@ const styles = StyleSheet.create({
   metricsText: {
     color: Colors.AppTheme.colors.text,
     fontSize: 15,
+  },
+  paceBtnContainer: {
+    marginTop: 20,
+    marginBottom: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

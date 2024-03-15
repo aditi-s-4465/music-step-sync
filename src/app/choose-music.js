@@ -7,6 +7,7 @@ import {
   Image,
   FlatList,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Colors } from "../styles";
 import { router, Link } from "expo-router";
@@ -14,6 +15,7 @@ import { makeRedirectUri, useAuthRequest } from "expo-auth-session";
 import { useEffect, useState } from "react";
 import * as SpotifyHelper from "../api/spotifyHelper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Linking from "expo-linking";
 
 const PlaylistCard = ({ item, isSelected, onPress }) => (
   <Pressable
@@ -135,8 +137,20 @@ export default function ChooseMusic() {
       return;
     }
 
-    // go to workout page after done loading data from api
-    router.push("/workout");
+    // start playing random song to make playback api work
+    Alert.alert(
+      "Opening Spotify",
+      "Make sure to return to this app after Spotify is open",
+      [
+        {
+          text: "OK",
+          onPress: () => {
+            Linking.openURL(reducedData[0].uri);
+            router.push("/workout");
+          },
+        },
+      ]
+    );
   };
 
   // load playlists on component load if you've already signed in
