@@ -5,6 +5,8 @@ import { Link } from "expo-router";
 import { Pedometer } from "expo-sensors";
 import { spmUpdateInterval } from "../../const";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SpotifyHelper from "../../api/spotifyHelper";
+import * as Linking from "expo-linking";
 
 export default function Workout() {
   const [workoutState, setWorkoutState] = useState({
@@ -38,6 +40,11 @@ export default function Workout() {
         const songs = await AsyncStorage.getItem("songs");
         const parsedSongs = JSON.parse(songs);
         setSongs(parsedSongs);
+
+        // play random initial song
+        Linking.openURL(
+          parsedSongs[Math.floor(Math.random() * parsedSongs.length)].uri
+        );
       } catch (err) {
         console.log(err);
       }
