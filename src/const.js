@@ -3,6 +3,8 @@
 // defines how often steps per minute is recalculated in milliseconds
 export const spmUpdateInterval = 5000;
 
+export const playerStateUpdateInterval = 5000;
+
 // this is how many recent data points are used in the
 // rolling average calculation of SPM
 export const numCalibrationIntervals = 10;

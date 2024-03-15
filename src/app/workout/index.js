@@ -8,6 +8,7 @@ import {
   numCalibrationIntervals,
   tempoAdjustmentTolerance,
   minDataPoints,
+  playerStateUpdateInterval,
 } from "../../const";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SpotifyHelper from "../../api/spotifyHelper";
@@ -20,6 +21,7 @@ export default function Workout() {
     stepCount: 0,
     secondsElapsed: 0,
     stepData: [],
+    changeSongTs: 0,
   });
 
   const [songs, setSongs] = useState([]);
@@ -110,6 +112,27 @@ export default function Workout() {
   //   }
   // };
 
+  // watch for changes when the current song will end to play
+  // a new song based on steps per minute
+  useEffect(() => {
+    const handleSongEnd = async () => {
+      console.log(workoutState.spm);
+      const song = getSongfromSPM(workoutState.spm);
+      await playSong(song);
+    };
+    if (workoutState.changeSongTs === 0) {
+      return;
+    }
+    const remainingTime =
+      workoutState.changeSongTs - workoutState.secondsElapsed;
+    if (remainingTime > 0) {
+      const timeoutId = setTimeout(handleSongEnd, remainingTime * 1000);
+      return () => clearTimeout(timeoutId);
+    } else {
+      handleSongEnd();
+    }
+  }, [workoutState.changeSongTs]);
+
   useEffect(() => {
     const authorizePedometer = async () => {
       const isAvailable = await Pedometer.isAvailableAsync();
@@ -172,6 +195,25 @@ export default function Workout() {
       });
     }, spmUpdateInterval);
 
+    //update player state every 5 seconds
+    const updatePlayerState = setInterval(async () => {
+      const token = await SpotifyHelper.getCurrentToken();
+      const res = await SpotifyHelper.spotifyRequest(
+        "me/player/",
+        token,
+        "GET"
+      );
+
+      setWorkoutState((prevState) => {
+        const changeMs = res.item.duration_ms - res.progress_ms;
+        const changeTimestamp = Math.floor(
+          changeMs / 1000 + prevState.secondsElapsed
+        );
+
+        return { ...prevState, changeSongTs: changeTimestamp };
+      });
+    }, playerStateUpdateInterval);
+
     // watch for step count changes
     const subscription = Pedometer.watchStepCount((result) => {
       setWorkoutState((prevState) => {
@@ -196,6 +238,7 @@ export default function Workout() {
     return () => {
       clearInterval(timer);
       clearInterval(spmCalculator);
+      clearInterval(updatePlayerState);
       subscription?.remove();
     };
   }, []);
