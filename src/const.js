@@ -14,3 +14,6 @@ export const minDataPoints = 4;
 
 // the allowed percent difference between SPM and BPM
 export const tempoAdjustmentTolerance = 0.1;
+
+// stores only this many recent workouts in storage
+export const maxRecordStorage = 5;

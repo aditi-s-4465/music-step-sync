@@ -1,7 +1,15 @@
-import { Text, View, StyleSheet, Pressable, Alert } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+  Image,
+} from "react-native";
 import { useState, useEffect } from "react";
 import { Colors } from "../../styles";
-import { Link } from "expo-router";
+import { router } from "expo-router";
 import { Pedometer } from "expo-sensors";
 import {
   spmUpdateInterval,
@@ -9,6 +17,7 @@ import {
   tempoAdjustmentTolerance,
   minDataPoints,
   playerStateUpdateInterval,
+  maxRecordStorage,
 } from "../../const";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SpotifyHelper from "../../api/spotifyHelper";
@@ -25,25 +34,31 @@ export default function Workout() {
   });
 
   const [songs, setSongs] = useState([]);
+  const [playedSongs, setPlayedSongs] = useState([]);
+  const [currentSong, setCurrentSong] = useState(null);
   // const [currDeviceId, setCurrDevice] = useState("");
-  const [paceIsSet, setIsPaceSet] = useState(false);
+  // const [paceIsSet, setIsPaceSet] = useState(false);
   const [tempoRange, setTempoRange] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
+  // allows user to manually change the song to their pace
   const paceChange = async () => {
-    if (!paceIsSet) {
-      // pick song from current pace
-      const song = getSongfromSPM(workoutState.spm);
-      const playing = await playSong(song);
-      if (playing) {
-        setIsPaceSet(!paceIsSet);
-      }
-    } else {
-      // reset pace by clearing step data
-      setWorkoutState((prevState) => {
-        return { ...prevState, stepData: [] };
-      });
-      setIsPaceSet(!paceIsSet);
-    }
+    const song = getSongfromSPM(workoutState.spm);
+    await playSong(song);
+    // if (!paceIsSet) {
+    //   // pick song from current pace
+    //   const song = getSongfromSPM(workoutState.spm);
+    //   const playing = await playSong(song);
+    //   if (playing) {
+    //     setIsPaceSet(!paceIsSet);
+    //   }
+    // } else {
+    //   // reset pace by clearing step data
+    //   setWorkoutState((prevState) => {
+    //     return { ...prevState, stepData: [] };
+    //   });
+    //   setIsPaceSet(!paceIsSet);
+    // }
   };
 
   // gets percent difference between bpm and spm
@@ -53,8 +68,17 @@ export default function Workout() {
 
   //algorithm to get closes bpm song from spm
   const getSongfromSPM = (spm) => {
-    console.log(tempoRange);
-    const closest = songs.reduce((prev, curr) =>
+    // console.log(tempoRange);
+
+    // went through all songs, will start repeating
+    if (playedSongs.length === songs.length - 1) {
+      setPlayedSongs([]);
+    }
+    const filteredSongs = songs.filter(
+      (item) => !playedSongs.includes(item.id)
+    );
+
+    const closest = filteredSongs.reduce((prev, curr) =>
       Math.abs(curr.tempo - spm) < Math.abs(prev.tempo - spm) ? curr : prev
     );
     return closest;
@@ -83,6 +107,8 @@ export default function Workout() {
       console.log(err);
       return false;
     }
+    setPlayedSongs([...playedSongs, songObj.id]);
+    setCurrentSong(songObj);
     return true;
   };
 
@@ -116,7 +142,6 @@ export default function Workout() {
   // a new song based on steps per minute
   useEffect(() => {
     const handleSongEnd = async () => {
-      console.log(workoutState.spm);
       const song = getSongfromSPM(workoutState.spm);
       await playSong(song);
     };
@@ -154,9 +179,12 @@ export default function Workout() {
     const getSelectedSongs = async () => {
       try {
         const songs = await AsyncStorage.getItem("songs");
+        const randSong = await AsyncStorage.getItem("randSong");
+        const parsedRandSong = JSON.parse(randSong);
         const parsedSongs = JSON.parse(songs);
         const tempos = parsedSongs.map((item) => item.tempo);
         setSongs(parsedSongs);
+        setCurrentSong(parsedRandSong);
         setTempoRange({ min: Math.min(...tempos), max: Math.max(...tempos) });
       } catch (err) {
         console.log(err);
@@ -244,7 +272,41 @@ export default function Workout() {
   }, []);
 
   const endWorkout = async () => {
-    console.log("end workout");
+    setIsLoading(true);
+    // get 3 most recently played songs
+    const token = await SpotifyHelper.getCurrentToken();
+    const recentlyPlayed = await SpotifyHelper.spotifyRequest(
+      "me/player/recently-played?limit=3",
+      token,
+      "GET"
+    );
+    const avgSpm = (workoutState.stepCount / workoutState.secondsElapsed) * 60;
+    // collect metrics from workout
+    const newData = {
+      recentlyPlayed: recentlyPlayed.items ? recentlyPlayed.items : [],
+      averageSpm: parseFloat(avgSpm.toFixed(1)),
+      steps: workoutState.stepCount,
+      time: workoutState.secondsElapsed,
+    };
+
+    // add metrics to local storage
+    try {
+      const data = JSON.parse(await AsyncStorage.getItem("workoutData"));
+      if (!data) {
+        await AsyncStorage.setItem("workoutData", JSON.stringify([newData]));
+      } else {
+        const combinedData = [...data, newData];
+        if (combinedData.length >= maxRecordStorage) {
+          combinedData.shift();
+        }
+        await AsyncStorage.setItem("workoutData", JSON.stringify(combinedData));
+      }
+    } catch (err) {
+      console.log(err);
+    }
+    setIsLoading(false);
+    // go to next page
+    router.push("/workout/summary");
   };
 
   return (
@@ -257,14 +319,17 @@ export default function Workout() {
       </View>
       <View style={styles.paceBtnContainer}>
         <Pressable onPress={() => paceChange()}>
-          {paceIsSet ? (
+          <Feather name="target" size={80} color="green" />
+
+          {/* {paceIsSet ? (
             <EvilIcons name="undo" size={80} color="green" />
           ) : (
             <Feather name="target" size={80} color="green" />
-          )}
+          )} */}
         </Pressable>
         <Text style={{ color: "white", fontSize: 20 }}>
-          {paceIsSet ? "Reset Pace" : "Set Pace"}
+          {/* {paceIsSet ? "Reset Pace" : "Set Pace"} */}
+          Set Pace
         </Text>
       </View>
 
@@ -278,23 +343,85 @@ export default function Workout() {
           {workoutState.secondsElapsed} Seconds
         </Text>
       </View>
-      <Link href="/workout/summary" asChild>
-        <Pressable style={styles.startButton} onPress={endWorkout}>
-          <Text
-            style={{
-              fontSize: 20,
-              color: Colors.AppTheme.colors.text,
-            }}
-          >
-            End Workout
-          </Text>
-        </Pressable>
-      </Link>
+      {currentSong && (
+        <View style={styles.currSongContainer}>
+          <View style={styles.contentContainer}>
+            <Image
+              src={currentSong.image.url}
+              style={styles.currSongImg}
+            ></Image>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={{ color: "white" }}
+            >
+              {currentSong.name}
+            </Text>
+          </View>
+          <View style={{ alignItems: "center", width: 120 }}>
+            <Text style={{ fontSize: 50, color: "white" }}>
+              {parseFloat(currentSong.tempo.toFixed(1))}
+            </Text>
+            <Text style={{ color: "white" }}>Beats/Min</Text>
+          </View>
+        </View>
+      )}
+      <Pressable style={styles.startButton} onPress={endWorkout}>
+        <Text
+          style={{
+            fontSize: 20,
+            color: Colors.AppTheme.colors.text,
+          }}
+        >
+          End Workout
+        </Text>
+      </Pressable>
+
+      {isLoading && (
+        <View style={styles.loading}>
+          <ActivityIndicator
+            animating={isLoading}
+            size="large"
+            color={"green"}
+          />
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  currSongContainer: {
+    marginTop: "10%",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  contentContainer: {
+    width: 120,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  currSongImg: {
+    width: 100,
+    height: 100,
+    borderRadius: 5,
+    marginBottom: "5%",
+  },
+
+  loading: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(52, 52, 52, 0.6)",
+  },
+
   container: {
     flex: 1,
     backgroundColor: Colors.AppTheme.colors.background,
@@ -308,6 +435,9 @@ const styles = StyleSheet.create({
     height: 50,
     alignItems: "center",
     justifyContent: "center",
+    position: "absolute",
+    bottom: "5%",
+    alignSelf: "center",
   },
   spmContainer: {
     marginTop: 50,
@@ -335,5 +465,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignItems: "center",
     justifyContent: "center",
+    width: 100,
+    height: 100,
   },
 });
