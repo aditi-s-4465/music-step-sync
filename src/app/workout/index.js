@@ -1,7 +1,7 @@
 import { Text, View, StyleSheet, Pressable, Alert } from "react-native";
 import { useState, useEffect } from "react";
 import { Colors } from "../../styles";
-import { Link } from "expo-router";
+import { router } from "expo-router";
 import { Pedometer } from "expo-sensors";
 import {
   spmUpdateInterval,
@@ -9,6 +9,7 @@ import {
   tempoAdjustmentTolerance,
   minDataPoints,
   playerStateUpdateInterval,
+  maxRecordStorage,
 } from "../../const";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SpotifyHelper from "../../api/spotifyHelper";
@@ -53,7 +54,7 @@ export default function Workout() {
 
   //algorithm to get closes bpm song from spm
   const getSongfromSPM = (spm) => {
-    console.log(tempoRange);
+    // console.log(tempoRange);
     const closest = songs.reduce((prev, curr) =>
       Math.abs(curr.tempo - spm) < Math.abs(prev.tempo - spm) ? curr : prev
     );
@@ -244,7 +245,39 @@ export default function Workout() {
   }, []);
 
   const endWorkout = async () => {
-    console.log("end workout");
+    // get 3 most recently played songs
+    const token = await SpotifyHelper.getCurrentToken();
+    const recentlyPlayed = await SpotifyHelper.spotifyRequest(
+      "me/player/recently-played?limit=3",
+      token,
+      "GET"
+    );
+    // collect metrics from workout
+    const newData = {
+      recentlyPlayed: recentlyPlayed.items ? recentlyPlayed.items : [],
+      averageSpm: workoutState.stepCount / workoutState.secondsElapsed,
+      steps: workoutState.stepCount,
+      time: workoutState.secondsElapsed,
+    };
+
+    // add metrics to local storage
+    try {
+      const data = JSON.parse(await AsyncStorage.getItem("workoutData"));
+      if (!data) {
+        await AsyncStorage.setItem("workoutData", JSON.stringify([newData]));
+      } else {
+        const combinedData = [...data, newData];
+        if (combinedData.length >= maxRecordStorage) {
+          combinedData.shift();
+        }
+        await AsyncStorage.setItem("workoutData", JSON.stringify(combinedData));
+      }
+    } catch (err) {
+      console.log(err);
+    }
+
+    // go to next page
+    router.push("/workout/summary");
   };
 
   return (
@@ -278,18 +311,16 @@ export default function Workout() {
           {workoutState.secondsElapsed} Seconds
         </Text>
       </View>
-      <Link href="/workout/summary" asChild>
-        <Pressable style={styles.startButton} onPress={endWorkout}>
-          <Text
-            style={{
-              fontSize: 20,
-              color: Colors.AppTheme.colors.text,
-            }}
-          >
-            End Workout
-          </Text>
-        </Pressable>
-      </Link>
+      <Pressable style={styles.startButton} onPress={endWorkout}>
+        <Text
+          style={{
+            fontSize: 20,
+            color: Colors.AppTheme.colors.text,
+          }}
+        >
+          End Workout
+        </Text>
+      </Pressable>
     </View>
   );
 }

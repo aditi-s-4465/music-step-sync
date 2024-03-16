@@ -1,14 +1,25 @@
-import React from "react";
+import { useState, useEffect } from "react";
 import { Text, View, StyleSheet, Pressable, Image } from "react-native";
 import { Colors } from "../../styles";
 import { Link } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Workout() {
-  const recentlyPlayedData = [
-    { id: "1", title: "Song 1", artist: "Artist 1" },
-    { id: "2", title: "Song 2", artist: "Artist 2" },
-    { id: "3", title: "Song 3", artist: "Artist 3" },
-  ];
+  const [data, setData] = useState([
+    { recentlyPlayed: [], averageSpm: 0, steps: 0, time: 0 },
+  ]);
+
+  // load data from last session
+  useEffect(() => {
+    const loadData = async () => {
+      const workoutData = await AsyncStorage.getItem("workoutData");
+      const parsedData = JSON.parse(workoutData);
+      setData(parsedData[parsedData.length - 1]);
+    };
+
+    loadData();
+  }, []);
+
   return (
     <View style={styles.container}>
       <Text
@@ -31,18 +42,18 @@ export default function Workout() {
         <Text style={{ ...styles.metricsText, fontSize: 24 }}>Average SPM</Text>
       </View>
       <View style={styles.spmContainer}>
-        <Text
-          style={{ fontSize: 50, color: Colors.AppTheme.colors.text }}
-        ></Text>
+        <Text style={{ fontSize: 50, color: Colors.AppTheme.colors.text }}>
+          {data.averageSpm}
+        </Text>
         <Text style={{ color: Colors.AppTheme.colors.text }}>Steps/Min</Text>
       </View>
       <View style={styles.metricsContainer}>
         <Text style={styles.metricsText}>Distance:</Text>
-        <Text style={styles.metricsText}>Steps</Text>
+        <Text style={styles.metricsText}>{data.steps} Steps</Text>
       </View>
       <View style={styles.metricsContainer}>
         <Text style={styles.metricsText}>Duration:</Text>
-        <Text style={styles.metricsText}> Seconds</Text>
+        <Text style={styles.metricsText}>{data.time} Seconds</Text>
       </View>
 
       <View style={styles.metricsContainer}>
@@ -52,27 +63,28 @@ export default function Workout() {
       </View>
 
       <View style={styles.listContainer}>
-        {recentlyPlayedData.map((item) => (
-          <View
-            key={item.id}
-            style={{ ...styles.roundedBox, backgroundColor: "#324037" }}
-          >
-            <View style={styles.listItemContainer}>
-              <Image
-                source={{
-                  uri: "file://C:/Users/ASUS/Downloads/musicicon_25x25.png",
-                }}
-                style={styles.iconImage}
-              />
+        {data.recentlyPlayed &&
+          data.recentlyPlayed.map((item) => (
+            <View
+              key={item.track.id}
+              style={{ ...styles.roundedBox, backgroundColor: "#324037" }}
+            >
+              <View style={styles.listItemContainer}>
+                <Image
+                  src={item.track.album.images[0].url}
+                  style={styles.iconImage}
+                />
 
-              {/* Text content */}
-              <View style={styles.textContainer}>
-                <Text style={styles.songName}>{item.title}</Text>
-                <Text style={styles.artistName}>{item.artist}</Text>
+                {/* Text content */}
+                <View style={styles.textContainer}>
+                  <Text style={styles.songName}>{item.track.name}</Text>
+                  <Text style={styles.artistName}>
+                    {item.track.artists.map((artist) => artist.name).join(", ")}
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          ))}
       </View>
 
       <Link href="/" asChild>
