@@ -33,6 +33,7 @@ export default function Workout() {
   });
 
   const [songs, setSongs] = useState([]);
+  const [playedSongs, setPlayedSongs] = useState([]);
   // const [currDeviceId, setCurrDevice] = useState("");
   const [paceIsSet, setIsPaceSet] = useState(false);
   const [tempoRange, setTempoRange] = useState({});
@@ -63,7 +64,16 @@ export default function Workout() {
   //algorithm to get closes bpm song from spm
   const getSongfromSPM = (spm) => {
     // console.log(tempoRange);
-    const closest = songs.reduce((prev, curr) =>
+
+    // went through all songs, will start repeating
+    if (playedSongs.length === songs.length - 1) {
+      setPlayedSongs([]);
+    }
+    const filteredSongs = songs.filter(
+      (item) => !playedSongs.includes(item.id)
+    );
+
+    const closest = filteredSongs.reduce((prev, curr) =>
       Math.abs(curr.tempo - spm) < Math.abs(prev.tempo - spm) ? curr : prev
     );
     return closest;
@@ -92,6 +102,7 @@ export default function Workout() {
       console.log(err);
       return false;
     }
+    setPlayedSongs([...playedSongs, songObj.id]);
     return true;
   };
 
@@ -261,10 +272,11 @@ export default function Workout() {
       token,
       "GET"
     );
+    const avgSpm = (workoutState.stepCount / workoutState.secondsElapsed) * 60;
     // collect metrics from workout
     const newData = {
       recentlyPlayed: recentlyPlayed.items ? recentlyPlayed.items : [],
-      averageSpm: workoutState.stepCount / workoutState.secondsElapsed,
+      averageSpm: parseFloat(avgSpm.toFixed(1)),
       steps: workoutState.stepCount,
       time: workoutState.secondsElapsed,
     };
