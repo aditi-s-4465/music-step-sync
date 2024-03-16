@@ -1,4 +1,11 @@
-import { Text, View, StyleSheet, Pressable, Alert } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { useState, useEffect } from "react";
 import { Colors } from "../../styles";
 import { router } from "expo-router";
@@ -29,6 +36,7 @@ export default function Workout() {
   // const [currDeviceId, setCurrDevice] = useState("");
   const [paceIsSet, setIsPaceSet] = useState(false);
   const [tempoRange, setTempoRange] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const paceChange = async () => {
     if (!paceIsSet) {
@@ -245,6 +253,7 @@ export default function Workout() {
   }, []);
 
   const endWorkout = async () => {
+    setIsLoading(true);
     // get 3 most recently played songs
     const token = await SpotifyHelper.getCurrentToken();
     const recentlyPlayed = await SpotifyHelper.spotifyRequest(
@@ -275,7 +284,7 @@ export default function Workout() {
     } catch (err) {
       console.log(err);
     }
-
+    setIsLoading(false);
     // go to next page
     router.push("/workout/summary");
   };
@@ -321,11 +330,31 @@ export default function Workout() {
           End Workout
         </Text>
       </Pressable>
+      {isLoading && (
+        <View style={styles.loading}>
+          <ActivityIndicator
+            animating={isLoading}
+            size="large"
+            color={"green"}
+          />
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  loading: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(52, 52, 52, 0.6)",
+  },
+
   container: {
     flex: 1,
     backgroundColor: Colors.AppTheme.colors.background,
