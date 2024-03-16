@@ -5,6 +5,7 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { useState, useEffect } from "react";
 import { Colors } from "../../styles";
@@ -34,6 +35,7 @@ export default function Workout() {
 
   const [songs, setSongs] = useState([]);
   const [playedSongs, setPlayedSongs] = useState([]);
+  const [currentSong, setCurrentSong] = useState(null);
   // const [currDeviceId, setCurrDevice] = useState("");
   const [paceIsSet, setIsPaceSet] = useState(false);
   const [tempoRange, setTempoRange] = useState({});
@@ -103,6 +105,7 @@ export default function Workout() {
       return false;
     }
     setPlayedSongs([...playedSongs, songObj.id]);
+    setCurrentSong(songObj);
     return true;
   };
 
@@ -136,7 +139,6 @@ export default function Workout() {
   // a new song based on steps per minute
   useEffect(() => {
     const handleSongEnd = async () => {
-      console.log(workoutState.spm);
       const song = getSongfromSPM(workoutState.spm);
       await playSong(song);
     };
@@ -332,6 +334,29 @@ export default function Workout() {
           {workoutState.secondsElapsed} Seconds
         </Text>
       </View>
+      {currentSong && (
+        <View style={styles.currSongContainer}>
+          <View style={styles.contentContainer}>
+            <Image
+              src={currentSong.image.url}
+              style={styles.currSongImg}
+            ></Image>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={{ color: "white" }}
+            >
+              {currentSong.name}
+            </Text>
+          </View>
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ fontSize: 50, color: "white" }}>
+              {parseFloat(currentSong.tempo.toFixed(1))}
+            </Text>
+            <Text style={{ color: "white" }}>BPM</Text>
+          </View>
+        </View>
+      )}
       <Pressable style={styles.startButton} onPress={endWorkout}>
         <Text
           style={{
@@ -342,6 +367,7 @@ export default function Workout() {
           End Workout
         </Text>
       </Pressable>
+
       {isLoading && (
         <View style={styles.loading}>
           <ActivityIndicator
@@ -356,6 +382,27 @@ export default function Workout() {
 }
 
 const styles = StyleSheet.create({
+  currSongContainer: {
+    marginTop: "10%",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    alignContent: "space-evenly",
+  },
+
+  contentContainer: {
+    marginRight: "10%",
+    width: 100,
+    height: 100,
+  },
+
+  currSongImg: {
+    width: 100,
+    height: 100,
+    borderRadius: 5,
+    marginBottom: "5%",
+  },
+
   loading: {
     position: "absolute",
     left: 0,
@@ -380,6 +427,9 @@ const styles = StyleSheet.create({
     height: 50,
     alignItems: "center",
     justifyContent: "center",
+    position: "absolute",
+    bottom: "5%",
+    alignSelf: "center",
   },
   spmContainer: {
     marginTop: 50,
