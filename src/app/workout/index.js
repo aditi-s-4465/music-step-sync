@@ -352,11 +352,11 @@ export default function Workout() {
               {currentSong.name}
             </Text>
           </View>
-          <View style={{ alignItems: "center" }}>
+          <View style={{ alignItems: "center", width: 120 }}>
             <Text style={{ fontSize: 50, color: "white" }}>
               {parseFloat(currentSong.tempo.toFixed(1))}
             </Text>
-            <Text style={{ color: "white" }}>BPM</Text>
+            <Text style={{ color: "white" }}>Beats/Min</Text>
           </View>
         </View>
       )}
@@ -390,13 +390,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    alignContent: "space-evenly",
   },
 
   contentContainer: {
-    marginRight: "10%",
-    width: 100,
-    height: 100,
+    width: 120,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   currSongImg: {
@@ -460,5 +459,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignItems: "center",
     justifyContent: "center",
+    width: 100,
+    height: 100,
   },
 });
