@@ -176,9 +176,12 @@ export default function Workout() {
     const getSelectedSongs = async () => {
       try {
         const songs = await AsyncStorage.getItem("songs");
+        const randSong = await AsyncStorage.getItem("randSong");
+        const parsedRandSong = JSON.parse(randSong);
         const parsedSongs = JSON.parse(songs);
         const tempos = parsedSongs.map((item) => item.tempo);
         setSongs(parsedSongs);
+        setCurrentSong(parsedRandSong);
         setTempoRange({ min: Math.min(...tempos), max: Math.max(...tempos) });
       } catch (err) {
         console.log(err);

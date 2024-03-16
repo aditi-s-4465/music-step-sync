@@ -117,20 +117,17 @@ export default function ChooseMusic() {
       }
     }
     // only get relevant features to reduce data size in storage
-    const reducedData = allData.map((item) => ({
-      id: item.id,
-      tempo: item.tempo,
-      duration: item.duration_ms,
-      uri: item.uri,
-      name: item.track.name,
-      image: item.track.album.images[0],
-      artists: item.track.artists.map((artist) => artist.name),
-    }));
+    const reducedData = allData.map(SpotifyHelper.reduceSongData);
+
+    //choose random song to start with
+    const randSong =
+      reducedData[Math.floor(Math.random() * reducedData.length)];
 
     // save songs to storage to use in workout
     try {
       const jsonData = JSON.stringify(reducedData);
       await AsyncStorage.setItem("songs", jsonData);
+      await AsyncStorage.setItem("randSong", JSON.stringify(randSong));
     } catch (err) {
       console.log(err);
       setErrMsg("Failed to connect to Spotify");
@@ -145,9 +142,7 @@ export default function ChooseMusic() {
         {
           text: "OK",
           onPress: () => {
-            Linking.openURL(
-              reducedData[Math.floor(Math.random() * reducedData.length)].uri
-            );
+            Linking.openURL(randSong.uri);
             router.push("/workout");
           },
         },
