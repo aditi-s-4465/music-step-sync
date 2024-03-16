@@ -37,25 +37,28 @@ export default function Workout() {
   const [playedSongs, setPlayedSongs] = useState([]);
   const [currentSong, setCurrentSong] = useState(null);
   // const [currDeviceId, setCurrDevice] = useState("");
-  const [paceIsSet, setIsPaceSet] = useState(false);
+  // const [paceIsSet, setIsPaceSet] = useState(false);
   const [tempoRange, setTempoRange] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
+  // allows user to manually change the song to their pace
   const paceChange = async () => {
-    if (!paceIsSet) {
-      // pick song from current pace
-      const song = getSongfromSPM(workoutState.spm);
-      const playing = await playSong(song);
-      if (playing) {
-        setIsPaceSet(!paceIsSet);
-      }
-    } else {
-      // reset pace by clearing step data
-      setWorkoutState((prevState) => {
-        return { ...prevState, stepData: [] };
-      });
-      setIsPaceSet(!paceIsSet);
-    }
+    const song = getSongfromSPM(workoutState.spm);
+    await playSong(song);
+    // if (!paceIsSet) {
+    //   // pick song from current pace
+    //   const song = getSongfromSPM(workoutState.spm);
+    //   const playing = await playSong(song);
+    //   if (playing) {
+    //     setIsPaceSet(!paceIsSet);
+    //   }
+    // } else {
+    //   // reset pace by clearing step data
+    //   setWorkoutState((prevState) => {
+    //     return { ...prevState, stepData: [] };
+    //   });
+    //   setIsPaceSet(!paceIsSet);
+    // }
   };
 
   // gets percent difference between bpm and spm
@@ -316,14 +319,17 @@ export default function Workout() {
       </View>
       <View style={styles.paceBtnContainer}>
         <Pressable onPress={() => paceChange()}>
-          {paceIsSet ? (
+          <Feather name="target" size={80} color="green" />
+
+          {/* {paceIsSet ? (
             <EvilIcons name="undo" size={80} color="green" />
           ) : (
             <Feather name="target" size={80} color="green" />
-          )}
+          )} */}
         </Pressable>
         <Text style={{ color: "white", fontSize: 20 }}>
-          {paceIsSet ? "Reset Pace" : "Set Pace"}
+          {/* {paceIsSet ? "Reset Pace" : "Set Pace"} */}
+          Set Pace
         </Text>
       </View>
 
