@@ -4,7 +4,7 @@ import { Buffer } from "buffer";
 
 export const spotifyConst = {
   clientId: "6f5d10838a144c989f21c3a3c76484cb",
-  clientSecret: "",
+  clientSecret: "cb373e2d06b14322af49498ca8af2f4c",
   scopes: [
     "streaming",
     "user-library-read",
@@ -20,6 +20,18 @@ export const spotifyConst = {
     authorizationEndpoint: "https://accounts.spotify.com/authorize",
     tokenEndpoint: "https://accounts.spotify.com/api/token",
   },
+};
+
+export const reduceSongData = (item) => {
+  return {
+    id: item.id,
+    tempo: item.tempo,
+    duration: item.duration_ms,
+    uri: item.uri,
+    name: item.track.name,
+    image: item.track.album.images[0],
+    artists: item.track.artists.map((artist) => artist.name),
+  };
 };
 
 export const spotifyRequest = async (endpoint, token, method, body) => {
