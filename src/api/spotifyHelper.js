@@ -4,7 +4,7 @@ import { Buffer } from "buffer";
 
 export const spotifyConst = {
   clientId: "6f5d10838a144c989f21c3a3c76484cb",
-  clientSecret: "cb373e2d06b14322af49498ca8af2f4c",
+  clientSecret: "",
   scopes: [
     "streaming",
     "user-library-read",
