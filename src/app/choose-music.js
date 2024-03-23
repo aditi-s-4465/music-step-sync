@@ -228,7 +228,9 @@ export default function ChooseMusic() {
           style={{
             fontSize: 20,
             color: Colors.AppTheme.colors.text,
+            fontWeight: "bold"
           }}
+
         >
           Start Workout
         </Text>
@@ -296,7 +298,7 @@ const styles = StyleSheet.create({
     height: 150,
     margin: 20,
   },
-  selectedCard: { borderColor: "lightblue" },
+  selectedCard: { borderColor: "white" },
 
   playlistImage: {
     width: "100%",
