@@ -70,7 +70,8 @@ export default function ChooseMusic() {
     setIsLoading(true);
 
     const token = await SpotifyHelper.getCurrentToken();
-    const allSongs = [];
+    // get all songs from selected playlists
+    let allSongs = [];
     for (const playlist of selectedPlaylists) {
       const tracksUrl = playlist.tracks.href;
       try {
@@ -86,6 +87,17 @@ export default function ChooseMusic() {
       }
     }
 
+    // make sure all songs have ids
+    allSongs = allSongs.filter((item) => {
+      try {
+        if (item.track.id) {
+          return true;
+        }
+      } catch (err) {
+        return false;
+      }
+    });
+
     // get audio features of all songs and combine with other information
     // split array so each array is at most 100
     function splitArray(array, size) {
@@ -97,7 +109,7 @@ export default function ChooseMusic() {
     }
 
     const splitSongs = splitArray(allSongs, 100);
-    const allData = [];
+    let allData = [];
     for (const chunk of splitSongs) {
       try {
         const features = await SpotifyHelper.getAudioFeatures(
@@ -116,6 +128,21 @@ export default function ChooseMusic() {
         return;
       }
     }
+
+    // make sure relevant features exist in data
+    allData = allData.filter((item) => {
+      try {
+        SpotifyHelper.reduceSongData(item);
+        // make sure audio features were combined with the correct song
+        if (item.track.id !== item.id) {
+          return false;
+        }
+        return true;
+      } catch (err) {
+        return false;
+      }
+    });
+
     // only get relevant features to reduce data size in storage
     const reducedData = allData.map(SpotifyHelper.reduceSongData);
 
@@ -228,9 +255,8 @@ export default function ChooseMusic() {
           style={{
             fontSize: 20,
             color: Colors.AppTheme.colors.text,
-            fontWeight: "bold"
+            fontWeight: "bold",
           }}
-
         >
           Start Workout
         </Text>
