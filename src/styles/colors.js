@@ -9,4 +9,6 @@ export const AppTheme = {
     border: "rgba(6, 95, 70, 0.65)",
     notification: "rgba(6, 95, 70, 0.65)",
   },
+  defaultImg:
+    "https://re-mm-assets.s3.amazonaws.com/product_photo/6616/large_Poly_Purple_1471498893.jpg",
 };

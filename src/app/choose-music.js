@@ -22,9 +22,12 @@ const PlaylistCard = ({ item, isSelected, onPress }) => (
     onPress={() => onPress(item)}
     style={[styles.playlistCard, isSelected && styles.selectedCard]}
   >
-    <Image src={item.images[0].url} style={styles.playlistImage} />
+    <Image
+      src={item.images ? item.images[0].url : Colors.AppTheme.defaultImg}
+      style={styles.playlistImage}
+    />
     <Text numberOfLines={1} ellipsizeMode="tail" style={styles.playlistCaption}>
-      {item.name}
+      {item.name ?? ""}
     </Text>
   </Pressable>
 );
@@ -187,7 +190,9 @@ export default function ChooseMusic() {
         setSignedIn(true);
         try {
           const res = await SpotifyHelper.getFavoritePlaylists(token);
-          setPlaylists(res);
+          // make sure all playlists have an id
+          const filteredRes = res.filter((item) => item.id);
+          setPlaylists(filteredRes);
           setIsLoading(false);
         } catch (err) {
           console.log(err);
