@@ -27,7 +27,7 @@ const PlaylistCard = ({ item, isSelected, onPress }) => (
       style={styles.playlistImage}
     />
     <Text numberOfLines={1} ellipsizeMode="tail" style={styles.playlistCaption}>
-      {item.name ?? ""}
+      {item?.name ?? ""}
     </Text>
   </Pressable>
 );
