@@ -22,7 +22,6 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SpotifyHelper from "../../api/spotifyHelper";
 import { Feather } from "@expo/vector-icons";
-import { EvilIcons } from "@expo/vector-icons";
 
 export default function Workout() {
   const [workoutState, setWorkoutState] = useState({
@@ -97,13 +96,13 @@ export default function Workout() {
         }
       );
       if (res.error) {
-        Alert.alert(
-          "Spotify Not Open",
-          "Make sure Spotify is open and playing a song"
-        );
-        return false;
+        throw new Error(res.error);
       }
     } catch (err) {
+      Alert.alert(
+        "Spotify Not Open",
+        "Make sure Spotify is open and playing a song"
+      );
       console.log(err);
       return false;
     }
@@ -225,21 +224,25 @@ export default function Workout() {
 
     //update player state every 5 seconds
     const updatePlayerState = setInterval(async () => {
-      const token = await SpotifyHelper.getCurrentToken();
-      const res = await SpotifyHelper.spotifyRequest(
-        "me/player/",
-        token,
-        "GET"
-      );
-
-      setWorkoutState((prevState) => {
-        const changeMs = res.item.duration_ms - res.progress_ms;
-        const changeTimestamp = Math.floor(
-          changeMs / 1000 + prevState.secondsElapsed
+      try {
+        const token = await SpotifyHelper.getCurrentToken();
+        const res = await SpotifyHelper.spotifyRequest(
+          "me/player/",
+          token,
+          "GET"
         );
 
-        return { ...prevState, changeSongTs: changeTimestamp };
-      });
+        setWorkoutState((prevState) => {
+          const changeMs = res.item.duration_ms - res.progress_ms;
+          const changeTimestamp = Math.floor(
+            changeMs / 1000 + prevState.secondsElapsed
+          );
+
+          return { ...prevState, changeSongTs: changeTimestamp };
+        });
+      } catch (err) {
+        console.log(err);
+      }
     }, playerStateUpdateInterval);
 
     // watch for step count changes
@@ -274,16 +277,23 @@ export default function Workout() {
   const endWorkout = async () => {
     setIsLoading(true);
     // get 3 most recently played songs
-    const token = await SpotifyHelper.getCurrentToken();
-    const recentlyPlayed = await SpotifyHelper.spotifyRequest(
-      "me/player/recently-played?limit=3",
-      token,
-      "GET"
-    );
+    let recentlyPlayed;
+    try {
+      const token = await SpotifyHelper.getCurrentToken();
+      const res = await SpotifyHelper.spotifyRequest(
+        "me/player/recently-played?limit=3",
+        token,
+        "GET"
+      );
+      recentlyPlayed = res.items;
+    } catch (err) {
+      console.log(err);
+    }
+
     const avgSpm = (workoutState.stepCount / workoutState.secondsElapsed) * 60;
     // collect metrics from workout
     const newData = {
-      recentlyPlayed: recentlyPlayed.items ? recentlyPlayed.items : [],
+      recentlyPlayed: recentlyPlayed ?? [],
       averageSpm: parseFloat(avgSpm.toFixed(1)),
       steps: workoutState.stepCount,
       time: workoutState.secondsElapsed,
