@@ -36,20 +36,23 @@ export default function Home() {
           return;
         }
 
-        const avgMi =
-          filteredData.reduce((sum, item) => sum + item.distanceMi, 0) /
-          filteredData.length;
+        const totalMi = filteredData.reduce(
+          (sum, item) => sum + item.distanceMi,
+          0
+        );
         const avgSpm =
           filteredData.reduce((sum, item) => sum + item.averageSpm, 0) /
           filteredData.length;
-        const avgDuration =
-          filteredData.reduce((sum, item) => sum + item.time, 0) /
-          filteredData.length;
+
+        const totalDuration = filteredData.reduce(
+          (sum, item) => sum + item.time,
+          0
+        );
 
         setWorkoutData({
           avgSpm: parseFloat(avgSpm.toFixed(1)),
-          avgMi: parseFloat(avgMi.toFixed(2)),
-          avgDuration: secondsToString(avgDuration),
+          totalMi: parseFloat(totalMi.toFixed(2)),
+          totalDuration: secondsToString(totalDuration),
           history: filteredData,
         });
       } catch (err) {
@@ -66,7 +69,7 @@ export default function Home() {
         <>
           <Text style={styles.Activity_text}>Activity</Text>
           <Text style={styles.Subtitle_text}>This Month</Text>
-          <Text style={styles.MonthlyTotal_text}>{workoutData?.avgMi}</Text>
+          <Text style={styles.MonthlyTotal_text}>{workoutData?.totalMi}</Text>
           <Text style={styles.Miles_text}>Miles</Text>
 
           <View style={styles.Stats_container}>
@@ -84,7 +87,7 @@ export default function Home() {
 
             <View style={styles.PairOthers_container}>
               <Text style={styles.PairNum_text}>
-                {workoutData?.avgDuration}
+                {workoutData?.totalDuration}
               </Text>
               <Text style={styles.PairText_text}>Duration</Text>
             </View>
