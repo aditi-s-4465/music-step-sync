@@ -372,7 +372,7 @@ export default function Workout() {
             </Text>
           </View>
           <View style={{ alignItems: "center", width: 120 }}>
-            <Text style={{ fontSize: 50, color: "white" }}>
+            <Text style={{ fontSize: 45, color: "white" }}>
               {parseFloat(currentSong.tempo.toFixed(1))}
             </Text>
             <Text style={{ color: "white" }}>Beats/Min</Text>
