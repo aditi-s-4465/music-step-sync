@@ -96,7 +96,7 @@ export default function Workout() {
         }
       );
       if (res.error) {
-        throw new Error(res.error);
+        throw new Error(JSON.stringify(res.error));
       }
     } catch (err) {
       Alert.alert(
@@ -231,7 +231,9 @@ export default function Workout() {
           token,
           "GET"
         );
-
+        if (Object.keys(res).length === 0) {
+          throw new Error("Spotify not playing");
+        }
         setWorkoutState((prevState) => {
           const changeMs = res.item.duration_ms - res.progress_ms;
           const changeTimestamp = Math.floor(
