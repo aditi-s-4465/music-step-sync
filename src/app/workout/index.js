@@ -22,6 +22,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SpotifyHelper from "../../api/spotifyHelper";
 import { Feather } from "@expo/vector-icons";
+import { secondsToString } from "../../const";
 
 export default function Workout() {
   const [workoutState, setWorkoutState] = useState({
@@ -353,7 +354,7 @@ export default function Workout() {
       <View style={styles.metricsContainer}>
         <Text style={styles.metricsText}>Duration:</Text>
         <Text style={styles.metricsText}>
-          {workoutState.secondsElapsed} Seconds
+          {secondsToString(workoutState.secondsElapsed)}
         </Text>
       </View>
       {currentSong && (
