@@ -297,6 +297,7 @@ export default function Workout() {
       averageSpm: parseFloat(avgSpm.toFixed(1)),
       steps: workoutState.stepCount,
       time: workoutState.secondsElapsed,
+      date: new Date().toString(),
     };
 
     // add metrics to local storage
