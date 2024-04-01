@@ -68,6 +68,7 @@ export default function Home() {
           <Text style={styles.Subtitle_text}>This Month</Text>
           <Text style={styles.MonthlyTotal_text}>{workoutData?.avgMi}</Text>
           <Text style={styles.Miles_text}>Miles</Text>
+
           <View style={styles.Stats_container}>
             <View style={styles.PairRuns_container}>
               <Text style={styles.PairNum_text}>
@@ -89,35 +90,38 @@ export default function Home() {
             </View>
           </View>
           <Text style={styles.Subtitle_text}>Recent Activities</Text>
-          {workoutData.history?.slice(-2).map((item, index) => (
-            <View key={index} style={styles.Activity_container}>
-              <View style={styles.Date_container}>
-                <Text style={styles.ActivityDate_text}>{item.day}</Text>
-                <Text style={styles.ActivityMonth_text}>{item.month}</Text>
-              </View>
+          {workoutData.history
+            ?.slice(-2)
+            .reverse()
+            .map((item, index) => (
+              <View key={index} style={styles.Activity_container}>
+                <View style={styles.Date_container}>
+                  <Text style={styles.ActivityDate_text}>{item.day}</Text>
+                  <Text style={styles.ActivityMonth_text}>{item.month}</Text>
+                </View>
 
-              <View style={styles.ActivityStats_container}>
-                <View style={styles.ActivityTop_container}>
-                  <Text style={styles.ActivityDate_text}>
-                    {item.distanceMi}
-                  </Text>
-                  <Text style={styles.ActivityDate_text}> Miles</Text>
-                </View>
-                <View style={styles.ActivityTop_container}>
-                  <Text style={styles.ActivityBottomDuration_text}>
-                    Duration:
-                  </Text>
-                  <Text style={styles.ActivityBottomNum_text}>
-                    {item.userFriendlyDuration}
-                  </Text>
-                  <Text style={styles.ActivityBottomAvg_text}>Avg SPM: </Text>
-                  <Text style={styles.ActivityBottomNum_text}>
-                    {item.averageSpm}
-                  </Text>
+                <View style={styles.ActivityStats_container}>
+                  <View style={styles.ActivityTop_container}>
+                    <Text style={styles.ActivityDate_text}>
+                      {item.distanceMi}
+                    </Text>
+                    <Text style={styles.ActivityDate_text}> Miles</Text>
+                  </View>
+                  <View style={styles.ActivityTop_container}>
+                    <Text style={styles.ActivityBottomDuration_text}>
+                      Duration:
+                    </Text>
+                    <Text style={styles.ActivityBottomNum_text}>
+                      {" " + item.userFriendlyDuration}
+                    </Text>
+                    <Text style={styles.ActivityBottomAvg_text}>Avg SPM: </Text>
+                    <Text style={styles.ActivityBottomNum_text}>
+                      {item.averageSpm}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
+            ))}
         </>
       )}
       <Pressable
@@ -189,7 +193,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     alignSelf: "flex-start",
     color: Colors.AppTheme.colors.text,
-    marginTop: 10,
+    marginTop: "10%",
     marginLeft: 15,
   },
   MonthlyTotal_text: {
@@ -198,6 +202,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     color: Colors.AppTheme.colors.text,
     marginTop: 5,
+    marginLeft: 20,
   },
   Miles_text: {
     fontSize: 20,
@@ -208,7 +213,7 @@ const styles = StyleSheet.create({
     marginLeft: 20,
   },
   PairNum_text: {
-    fontSize: 25,
+    fontSize: 23,
     fontWeight: "bold",
     alignSelf: "flex-start",
     color: Colors.AppTheme.colors.text,
