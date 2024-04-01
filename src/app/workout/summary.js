@@ -71,15 +71,28 @@ export default function Workout() {
             >
               <View style={styles.listItemContainer}>
                 <Image
-                  src={item.track.album.images[0].url}
+                  src={
+                    item?.track?.album?.images?.[0]?.url ??
+                    Colors.AppTheme.defaultImg
+                  }
                   style={styles.iconImage}
                 />
-
-                {/* Text content */}
                 <View style={styles.textContainer}>
-                  <Text style={styles.songName}>{item.track.name}</Text>
-                  <Text style={styles.artistName}>
-                    {item.track.artists.map((artist) => artist.name).join(", ")}
+                  <Text
+                    style={styles.songName}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {item?.track?.name ?? ""}
+                  </Text>
+                  <Text
+                    style={styles.artistName}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {item?.track?.artists
+                      .map((artist) => artist.name)
+                      .join(", ") ?? ""}
                   </Text>
                 </View>
               </View>

@@ -16,4 +16,28 @@ export const minDataPoints = 4;
 export const tempoAdjustmentTolerance = 0.1;
 
 // stores only this many recent workouts in storage
-export const maxRecordStorage = 5;
+export const maxRecordStorage = 20;
+
+// utility to convert steps to miles
+export const stepsToMiles = (steps) => {
+  const avgStepsPerMi = 2250;
+  const totalMi = steps / avgStepsPerMi;
+  return parseFloat(totalMi.toFixed(2));
+};
+
+// utility to convert seconds to user friendly string
+
+export const secondsToString = (seconds) => {
+  seconds = Math.floor(seconds);
+  const hours = Math.floor(seconds / 3600);
+  const remainingSeconds = seconds % 3600;
+  const minutes = Math.floor(remainingSeconds / 60);
+  const formattedSeconds = remainingSeconds % 60;
+
+  // Format the result
+  const formattedTime = `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}:${formattedSeconds.toString().padStart(2, "0")}`;
+
+  return formattedTime;
+};
